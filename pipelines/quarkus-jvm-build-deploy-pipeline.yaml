@@ -1,0 +1,58 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: ecm-webhook-quarkus-jvm
+  annotations:
+    app.openshift.io/runtime: openjdk
+    app.openshift.io/builder: gradle
+spec:
+  params:
+    - name: git-url
+      description: The url for the git repository
+    - name: git-revision
+      description: The git revision (branch, tag, or sha) that should be built
+      default: master
+  tasks:
+    - name: build-source
+      taskRef:
+        name: quarkus-jvm-gradle-build
+      params:
+        - name: git-url
+          value: "$(params.git-url)"
+        - name: git-revision
+          value: "$(params.git-revision)"
+        - name: source-dir
+          value: "$(params.source-dir)"
+        - name: app-name
+          value: "$(params.app-name)"
+        - name: image-server
+          value: "$(params.image-server)"
+        - name: image-namespace
+          value: "$(params.image-namespace)"
+        - name: image-repository
+          value: "$(params.image-repository)"
+        - name: image-tag
+          value: "$(params.image-tag)"
+    - name: build-image
+      taskRef:
+        name: ibm-build-tag-push
+      runAfter:
+        - build-source
+      params:
+        - name: git-url
+          value: "$(params.git-url)"
+        - name: git-revision
+          value: "$(params.git-revision)"
+        - name: source-dir
+          value: "$(params.source-dir)"
+        - name: image-server
+          value: "$(params.image-server)"
+        - name: image-namespace
+          value: "$(params.image-namespace)"
+        - name: image-repository
+          value: "$(params.image-repository)"
+        - name: image-tag
+          value: "$(params.image-tag)"
+
+
+

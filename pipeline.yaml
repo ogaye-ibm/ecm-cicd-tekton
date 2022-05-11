@@ -1,0 +1,68 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+spec:
+  workspaces:
+  - name: shared-workspace
+  - name: ssh-creds
+    description: The workspace hosting the git repo conf, credentials
+  params:
+  - name: git-url
+    description: Source code git repo
+    default: http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples
+  - name: git-revision
+    description: Revision/branch, master, main, etc
+    default: main
+  - name: IMAGE
+    description: The name of the image to be built from the code.
+    default: webhook-jvm
+  - name: IMAGE_TAG
+    description: Tag of the image
+    default: latest
+  - name: DOCKERFILE
+    description: Path to the Dockerfile to build.
+    default: 'src/main/docker/Dockerfile.jvm'
+  - name: IMAGE_REGISTRY
+    description: Registry to push the image to
+    default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE'
+  tasks:
+  - name: fetch-repository
+    taskRef:
+      name: git-clone
+      kind: ClusterTask
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+    - name: basic-auth
+      workspace: ssh-creds
+    params:
+    - name: url
+      value: $(params.git-url)
+    - name: subdirectory
+      value: ""
+    - name: deleteExisting
+      value: "true"
+    - name: revision
+      value: $(params.git-revision)
+  - name: build-source
+    taskRef:
+      name: quarkus-jvm-gradle-build
+    workspaces:
+    - name: src-build-workspace
+      workspace: shared-workspace
+    params:
+    - name: git-url
+      value: $(params.git-url)
+    - name: git-revision
+      value: $(params.git-revision)
+    - name: DOCKERFILE
+      value: $(params.DOCKERFILE)
+    - name: IMAGE
+      value: $(params.IMAGE)
+    - name: IMAGE_TAG
+      value: $(params.IMAGE_TAG)
+    - name: IMAGE_REGISTRY
+      value: $(params.IMAGE_REGISTRY)
+    runAfter:
+      - fetch-repository

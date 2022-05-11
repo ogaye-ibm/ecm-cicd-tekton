@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: quarkus-jvm-gradle-build
+spec:
+  workspaces:
+  - name: src-build-workspace
+    description: The workspace consisting of the gradle project.
+  params:
+  - name: gradle-image
+    type: string
+    #default: registry.access.redhat.com/ubi8/openjdk-11
+    default: lackrobin/quarkus-gradle-build-image
+    #quay.io/ibmgaragecloud/gradle:jdk11
+    #default: ghcr.io/graalvm/jdk:java17-22.0.0
+    #lucasmarfe/gradle-jdk17
+    #default: registry.access.redhat.com/ubi8/openjdk-17
+  - name: git-url
+  - name: git-revision
+    default: main
+  - name: source-dir
+    default: "."
+  - name: DOCKERFILE
+    default: src/main/docker/Dockerfile.jvm
+  steps:
+  - name: step1
+    image: lackrobin/quarkus-gradle-build-image
+    workingDir: /workspace/src-build-workspace
+    command: ["/bin/bash"]
+    args:
+      - -c
+      - |
+        set -e
+        ./gradlew build -x test -Dquarkus.package.type=native -Dquarkus.native.native-image-xmx=16g -Dorg.gradle.jvmargs=-Xmx3g
+  - name: step2
+    image: gcr.io/cloud-builders/docker
+    workingDir: /workspace/src-build-workspace
+    command: ["/bin/bash"]
+    args:
+      - -c
+      - |
+        set -e
+        docker build -t webhook-jvm -f src/main/docker/Dockerfile.native
