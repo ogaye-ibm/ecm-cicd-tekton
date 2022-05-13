@@ -26,6 +26,8 @@ spec:
   - name: IMAGE_REGISTRY
     description: Registry to push the image to
     default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE'
+  - name: manifest_dir
+    default: 'custom-openshift-yaml'
   tasks:
   - name: fetch-repository
     taskRef:
@@ -45,7 +47,7 @@ spec:
       value: "true"
     - name: revision
       value: $(params.git-revision)
-  - name: build-source
+  - name: build-source-and-image
     taskRef:
       name: quarkus-jvm-gradle-build
     workspaces:
@@ -66,3 +68,14 @@ spec:
       value: $(params.IMAGE_REGISTRY)
     runAfter:
       - fetch-repository
+  - name: apply-manifests
+    taskRef:
+      name: apply-manifests
+    workspaces:
+      - name: ocp-cli-workspace
+        workspace: shared-workspace
+    params:
+      - name: manifest_dir
+        value: $(params.manifest_dir)
+    runAfter:
+      - build-source-and-image

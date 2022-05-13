@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: apply-manifests
+spec:
+  workspaces:
+  - name: ocp-cli-workspace
+  params:
+    - name: manifest_dir
+      description: The directory in source that contains yaml manifests
+      type: string
+      default: "deployment/openshift"
+  steps:
+    - name: apply
+      image: registry.redhat.io/openshift4/ose-cli:latest
+      #image: quay.io/openshift/origin-cli:latest
+      workingDir: /workspace/ocp-cli-workspace
+      command: ["/bin/bash", "-c"]
+      args:
+        - |-
+          echo Applying manifests in $(inputs.params.manifest_dir) directory
+          oc apply -f $(inputs.params.manifest_dir)
+          echo -----------------------------------
