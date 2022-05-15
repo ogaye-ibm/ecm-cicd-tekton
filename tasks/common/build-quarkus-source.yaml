@@ -1,0 +1,27 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-quarkus-source
+spec:
+  params:
+    - name: jdk-image
+      description: Java image for src build
+      default: 'registry.access.redhat.com/ubi8/openjdk-17'
+  workspaces:
+    - name: src-build-workspace
+  steps:
+    - name: build
+      image: $(inputs.params.jdk-image)
+      workingDir: /workspace/src-build-workspace
+      command: [ "/bin/bash" ]
+      args:
+        - -c
+        - |
+          set -e
+          pwd
+          ./gradlew build -x test --no-daemon
+          ls -l
+          echo "*********************"
+          ls -l ./build
+          echo "*********************"
+          ls -l ./build/libs

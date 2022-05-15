@@ -1,12 +1,15 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: build-and-deploy
+  name: build-push-deploy-kaniko
 spec:
   workspaces:
   - name: shared-workspace
+    description: the workspace shared by all task, PVC
   - name: ssh-creds
-    description: The workspace hosting the git repo conf, credentials
+    description: the workspace hosting the git repo conf, credentials
+  - name: docker-reg-creds
+    description: the workspace hosting the docker registry conf, credentials
   params:
   - name: git-url
     description: Source code git repo
@@ -27,7 +30,7 @@ spec:
     description: Registry to push the image to
     default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE'
   - name: manifest_dir
-    default: 'custom-openshift-yaml'
+    default: 'deployment/openshift'
   tasks:
   - name: fetch-repository
     taskRef:
@@ -47,25 +50,36 @@ spec:
       value: "true"
     - name: revision
       value: $(params.git-revision)
-  - name: build-source-and-image
+
+  - name: build-quarkus-source
     taskRef:
-      name: quarkus-jvm-gradle-build
-    workspaces:
-    - name: src-build-workspace
-      workspace: shared-workspace
+      name: build-quarkus-source
     params:
-    - name: git-url
-      value: $(params.git-url)
-    - name: git-revision
-      value: $(params.git-revision)
+    - name: jdk-image
+      value: 'registry.access.redhat.com/ubi8/openjdk-17'
+    workspaces:
+      - name: src-build-workspace
+        workspace: shared-workspace
+    runAfter:
+      - fetch-repository
+
+  - name: kaniko-build-image
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-workspace
+    - name: dockerconfig
+      workspace: docker-reg-creds
+    params:
+    - name: CONTEXT
+      value: ./
     - name: DOCKERFILE
       value: $(params.DOCKERFILE)
     - name: IMAGE
-      value: $(params.IMAGE)
-    - name: IMAGE_TAG
-      value: $(params.IMAGE_TAG)
-    - name: IMAGE_REGISTRY
-      value: $(params.IMAGE_REGISTRY)
+      #value: $(params.IMAGE)
+      value: 'quay.io/omar.gaye-ibm/webhook-jvm:0.0.3'
+      #value: 'image-registry.openshift-image-registry.svc:5000/test/webhook-jvm:0.0.3'
     runAfter:
       - fetch-repository
   - name: apply-manifests
@@ -78,4 +92,4 @@ spec:
       - name: manifest_dir
         value: $(params.manifest_dir)
     runAfter:
-      - build-source-and-image
+      - build-quarkus-source
