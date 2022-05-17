@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: build-push-deploy-kaniko
+  name: build-push-deploy-jvm
 spec:
   workspaces:
   - name: shared-workspace
@@ -51,9 +51,9 @@ spec:
       value: "true"
     - name: revision
       value: $(params.git-revision)
-  - name: build-quarkus-source
+  - name: build-quarkus-jvm
     taskRef:
-      name: build-quarkus-source
+      name: build-quarkus-jvm
     params:
     - name: jdk-image
       value: 'registry.access.redhat.com/ubi8/openjdk-17'
@@ -78,7 +78,7 @@ spec:
     - name: IMAGE
       value: "$(params.IMAGE_REGISTRY)/$(params.IMAGE_NAME):$(params.IMAGE_TAG)"
     runAfter:
-      - build-quarkus-source
+      - build-quarkus-jvm
   - name: apply-manifests
     taskRef:
       name: apply-manifests

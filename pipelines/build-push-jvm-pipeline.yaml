@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: build-push-kaniko
+  name: build-push-jvm
 spec:
   workspaces:
     - name: shared-workspace
@@ -49,9 +49,9 @@ spec:
           value: "true"
         - name: revision
           value: $(params.git-revision)
-    - name: build-quarkus-source
+    - name: build-quarkus-jvm
       taskRef:
-        name: build-quarkus-source
+        name: build-quarkus-jvm
       workspaces:
         - name: src-build-workspace
           workspace: shared-workspace
@@ -73,4 +73,4 @@ spec:
         - name: IMAGE
           value: "$(params.IMAGE_REGISTRY)/$(params.IMAGE_NAME):$(params.IMAGE_TAG)"
       runAfter:
-        - build-quarkus-source
+        - build-quarkus-jvm

@@ -1,0 +1,76 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-push-graalvm
+spec:
+  workspaces:
+    - name: shared-workspace
+      description: the workspace shared by all task, PVC
+    - name: ssh-creds
+      description: the workspace hosting the git repo conf, credentials
+    - name: docker-reg-creds
+      description: the workspace hosting the docker registry conf, credentials
+  params:
+    - name: git-url
+      description: Source code git repo
+      default: 'http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples'
+    - name: git-revision
+      description: Revision/branch, master, main, etc
+      default: main
+    - name: IMAGE_REGISTRY
+      description: Registry to push the image to
+      #default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE:0.0.3'
+      default: 'quay.io/omar.gaye-ibm'
+    - name: IMAGE_NAME
+      description: The name of the image to be built from the code.
+      default: 'webhook-native'
+    - name: IMAGE_TAG
+      description: Tag of the image
+      default: 'latest'
+    - name: DOCKERFILE
+      description: Path to the Dockerfile to build.
+      default: 'src/main/docker/Dockerfile.native-micro'
+  tasks:
+    - name: fetch-repository
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+        - name: basic-auth
+          workspace: ssh-creds
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: subdirectory
+          value: ""
+        - name: deleteExisting
+          value: "true"
+        - name: revision
+          value: $(params.git-revision)
+    - name: build-quarkus-graalvm
+      taskRef:
+        name: build-quarkus-graalvm
+      workspaces:
+        - name: src-build-workspace
+          workspace: shared-workspace
+      runAfter:
+        - fetch-repository
+    - name: kaniko-build-image
+      taskRef:
+        name: kaniko
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+        - name: dockerconfig
+          workspace: docker-reg-creds
+      params:
+        - name: CONTEXT
+          value: ./
+        - name: DOCKERFILE
+          value: $(params.DOCKERFILE)
+        - name: IMAGE
+          value: "$(params.IMAGE_REGISTRY)/$(params.IMAGE_NAME):$(params.IMAGE_TAG)"
+      runAfter:
+        - build-quarkus-graalvm
