@@ -22,9 +22,7 @@ spec:
           pwd
           echo $JAVA_HOME
           ls -l $JAVA_HOME/bin
-          gu install native-image
-          #./gradlew build -x test --no-daemon
-           ./gradlew build -Dquarkus.package.type=native -x test --no-daemon
+          ./gradlew build -x test --no-daemon
           ls -l
           echo "*********************"
           ls -l ./build

@@ -76,7 +76,7 @@ spec:
     - name: DOCKERFILE
       value: $(params.DOCKERFILE)
     - name: IMAGE
-      value: $(params.IMAGE)
+      value: "$(params.IMAGE_REGISTRY)/$(params.IMAGE_NAME):$(params.IMAGE_TAG)"
     runAfter:
       - build-quarkus-source
   - name: apply-manifests
