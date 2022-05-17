@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: quarkus-jvm-gradle-build
+  name: quarkus-jvm-buildah-build
 spec:
   workspaces:
   - name: src-build-workspace
@@ -65,12 +65,19 @@ spec:
         echo " ***** Task build-image completed sucessfully."
         echo " ---------------------------------------------"
     securityContext:
-      #privileged: true
-      runAsUser: 0
-    env:
-      - name: NAMESPACE
-        valueFrom:
-          fieldRef:
-            fieldPath: metadata.namespace
+      privileged: true
+      volumeMounts:
+        - name: varlibcontainers
+          mountPath: /var/lib/containers
+      env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+    volumes:
+      - name: varlibcontainers
+        emptyDir: { }
+      - name: m2-repository
+        emptyDir: { }
 
 

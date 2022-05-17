@@ -13,22 +13,23 @@ spec:
   params:
   - name: git-url
     description: Source code git repo
-    default: http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples
+    default: 'http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples'
   - name: git-revision
     description: Revision/branch, master, main, etc
     default: main
-  - name: IMAGE
+  - name: IMAGE_REGISTRY
+    description: Registry to push the image to
+    #default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE:0.0.3'
+    default: 'quay.io/omar.gaye-ibm'
+  - name: IMAGE_NAME
     description: The name of the image to be built from the code.
-    default: webhook-jvm
+    default: 'webhook-jvm'
   - name: IMAGE_TAG
     description: Tag of the image
-    default: latest
+    default: 'latest'
   - name: DOCKERFILE
     description: Path to the Dockerfile to build.
     default: 'src/main/docker/Dockerfile.jvm'
-  - name: IMAGE_REGISTRY
-    description: Registry to push the image to
-    default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE'
   - name: manifest_dir
     default: 'deployment/openshift'
   tasks:
@@ -50,7 +51,6 @@ spec:
       value: "true"
     - name: revision
       value: $(params.git-revision)
-
   - name: build-quarkus-source
     taskRef:
       name: build-quarkus-source
@@ -62,7 +62,6 @@ spec:
         workspace: shared-workspace
     runAfter:
       - fetch-repository
-
   - name: kaniko-build-image
     taskRef:
       name: kaniko
@@ -77,11 +76,9 @@ spec:
     - name: DOCKERFILE
       value: $(params.DOCKERFILE)
     - name: IMAGE
-      #value: $(params.IMAGE)
-      value: 'quay.io/omar.gaye-ibm/webhook-jvm:0.0.3'
-      #value: 'image-registry.openshift-image-registry.svc:5000/test/webhook-jvm:0.0.3'
+      value: $(params.IMAGE)
     runAfter:
-      - fetch-repository
+      - build-quarkus-source
   - name: apply-manifests
     taskRef:
       name: apply-manifests
@@ -92,4 +89,4 @@ spec:
       - name: manifest_dir
         value: $(params.manifest_dir)
     runAfter:
-      - build-quarkus-source
+      - kaniko-build-image

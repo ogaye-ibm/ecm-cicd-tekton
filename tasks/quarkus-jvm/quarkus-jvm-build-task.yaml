@@ -7,6 +7,7 @@ spec:
     - name: jdk-image
       description: Java image for src build
       default: 'registry.access.redhat.com/ubi8/openjdk-17'
+      #default: 'ghcr.io/graalvm/graalvm-ce'
   workspaces:
     - name: src-build-workspace
   steps:
@@ -19,7 +20,11 @@ spec:
         - |
           set -e
           pwd
-          ./gradlew build -x test --no-daemon
+          echo $JAVA_HOME
+          ls -l $JAVA_HOME/bin
+          gu install native-image
+          #./gradlew build -x test --no-daemon
+           ./gradlew build -Dquarkus.package.type=native -x test --no-daemon
           ls -l
           echo "*********************"
           ls -l ./build

@@ -1,0 +1,106 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-push-deploy-kaniko
+spec:
+  workspaces:
+    - name: shared-workspace
+      description: the workspace shared by all task, PVC
+    - name: ssh-creds
+      description: the workspace hosting the git repo conf, credentials
+    - name: docker-reg-creds
+      description: the workspace hosting the docker registry conf, credentials
+  params:
+    - name: git-url
+      description: Source code git repo
+      default: http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples
+    - name: git-revision
+      description: Revision/branch, master, main, etc
+      default: main
+    - name: IMAGE
+      description: The name of the image to be built from the code.
+      #default: webhook-jvm
+      default: 'quay.io/omar.gaye-ibm/webhook-jvm:0.0.3'
+    - name: IMAGE_TAG
+      description: Tag of the image
+      default: latest
+    - name: DOCKERFILE
+      description: Path to the Dockerfile to build.
+      default: 'src/main/docker/Dockerfile.jvm'
+    - name: IMAGE_REGISTRY
+      description: Registry to push the image to
+      #default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE:0.0.3'
+      default: 'quay.io/omar.gaye-ibm/'
+    - name: manifest_dir
+      default: 'deployment/openshift'
+  tasks:
+    - name: fetch-repository
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+        - name: basic-auth
+          workspace: ssh-creds
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: subdirectory
+          value: ""
+        - name: deleteExisting
+          value: "true"
+        - name: revision
+          value: $(params.git-revision)
+    - name: build-quarkus-source
+      taskRef:
+        name: build-quarkus-source
+      params:
+        - name: jdk-image
+          value: 'registry.access.redhat.com/ubi8/openjdk-17'
+      workspaces:
+        - name: src-build-workspace
+          workspace: shared-workspace
+      runAfter:
+        - fetch-repository
+    - name: buildah
+        image: $(inputs.params.BUILDER_IMAGE)
+        workingDir: /workspace/src-build-workspace
+        command: [ "/bin/bash" ]
+        args:
+          - -c
+          - |
+            set -e
+            echo =======================================
+            pwd
+            ls -l
+            NEW_IMAGE_ID="$(inputs.params.IMAGE_REGISTRY)/$(inputs.params.IMAGE):$(inputs.params.IMAGE_TAG)"
+            echo " ***** Building Image $NEW_IMAGE_ID ..."
+            buildah build --isolation=chroot --tls-verify="$(inputs.params.TLSVERIFY)" --layers -f "$(inputs.params.DOCKERFILE)" -t "$NEW_IMAGE_ID" "$(inputs.params.CONTEXT)"
+            echo " ***** Pushing Image $NEW_IMAGE_ID to Registry... "
+            buildah push --tls-verify="$(inputs.params.TLSVERIFY)" "$NEW_IMAGE_ID" "docker://$NEW_IMAGE_ID"
+            echo "NEW_IMAGE_ID=$NEW_IMAGE_ID" >> /workspace/env-config
+            echo " ---------------------------------------------"
+            echo " ***** Task build-image completed sucessfully."
+            echo " ---------------------------------------------"
+        securityContext:
+          privileged: true
+          runAsUser: 0
+        env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+      runAfter:
+        - build-quarkus-source
+    - name: apply-manifests
+      taskRef:
+        name: apply-manifests
+      workspaces:
+        - name: ocp-cli-workspace
+          workspace: shared-workspace
+      params:
+        - name: manifest_dir
+          value: $(params.manifest_dir)
+      runAfter:
+        - kaniko-build-image

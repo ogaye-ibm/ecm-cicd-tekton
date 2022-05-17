@@ -1,13 +1,15 @@
 
 
 ```yaml
+kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/kaniko/0.5/kaniko.yaml
+
 oc apply -f resources/workspace-pvc.yaml
 
 oc apply -f resources/git-src-creds-secret.yaml
 oc secrets link pipeline webhook-git-src-basic-auth-secret
 
-oc apply -f resources/docker-creds.yaml
-# Optional, secret will be bound to kaniko workspace
+oc apply -f resources/docker-creds-secret.yaml
+# Optional: secret will be bound to kaniko workspace, no need to link to sa
 oc secrets link pipeline docker-creds
 
 oc apply -f resources/redhat-pull-secret.yaml
@@ -24,6 +26,27 @@ oc apply -f tasks/common
 oc apply -f tasks/quarkus-jvm
 oc apply -f pipelines
 
+tkn pipeline start build-push-deploy-kaniko \
+ -w name=shared-workspace,claimName=webhook-pvc \
+ -w name=ssh-creds,secret=webhook-git-src-basic-auth-secret \
+ -w name=docker-reg-creds,secret=docker-creds \
+ --showlog
+
+
+
+gradle build -Dquarkus.package.type=native \ 
+-Dquarkus.native.container-build=true \ 
+-Dquarkus.native.native-image-xmx=8G \
+-x test #optional
+
+gradle build -Dquarkus.package.type=native \
+-Dquarkus.native.container-build=true \ 
+-Dquarkus.native.native-image-xmx=8G \ 
+-x test
+
+docker build -f src/main/docker/Dockerfile.native-micro -t webhook-native:0.0.3 .
+docker tag webhook-native:0.0.3 quay.io/omar.gaye-ibm/webhook-native:0.0.3
+docker push quay.io/omar.gaye-ibm/webhook-native:0.0.3
 
 
 
