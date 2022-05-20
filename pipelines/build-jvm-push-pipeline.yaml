@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: build-push-jvm
+  name: build-jvm-push
 spec:
   workspaces:
     - name: shared-workspace
@@ -13,7 +13,7 @@ spec:
   params:
     - name: git-url
       description: Source code git repo
-      default: 'http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples'
+      default: 'http://github.com/ogaye-ibm/ecm-serverless-samples'
     - name: git-revision
       description: Revision/branch, master, main, etc
       default: main

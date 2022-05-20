@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: build-push-deploy-jvm
+  name: build-jvm-push-deploy
 spec:
   workspaces:
   - name: shared-workspace
@@ -13,13 +13,13 @@ spec:
   params:
   - name: git-url
     description: Source code git repo
-    default: 'http://github.com/ogaye-ibm/ibm-content-platform-engine-serverless-samples'
+    default: 'http://github.com/ogaye-ibm/ecm-serverless-samples'
   - name: git-revision
     description: Revision/branch, master, main, etc
     default: main
   - name: IMAGE_REGISTRY
     description: Registry to push the image to
-    #default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE:0.0.3'
+    #default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE'
     default: 'quay.io/omar.gaye-ibm'
   - name: IMAGE_NAME
     description: The name of the image to be built from the code.

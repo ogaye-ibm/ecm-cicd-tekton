@@ -1,0 +1,81 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: update-manifests
+spec:
+  params:
+    - name: GIT_REPOSITORY
+    - name: FEATURE
+      default: 'feature'
+    - name: CURRENT_IMAGE
+    - name: NEW_IMAGE
+    - name: NEW_DIGEST
+    - name: KUSTOMIZATION_PATH
+  workspaces:
+    - name: update-manifests-workspace
+    - name: argocd-basic-auth
+  results:
+    - name: commit
+      description: The commit SHA
+  steps:
+    - image: 'docker.io/alpine/git:v2.26.2'
+      name: git-clone
+      resources: {}
+      script: >
+        rm -rf git-update-digest-workdir
+
+        git clone $(params.GIT_REPOSITORY)
+        git-update-digest-workdir
+      workingDir: $(workspaces.update-manifests-workspace.path)
+    - image: 'quay.io/wpernath/kustomize-ubi:latest'
+      name: update-digest
+      resources: {}
+      script: >
+        cd git-update-digest-workdir/$(params.KUSTOMIZATION_PATH)
+
+        ls -l
+        
+        kustomize build -o ./base/01_webhook-kn-serving-jvm.yaml
+
+        echo "##########################"
+
+        echo "### kustomization.yaml ###"
+
+        echo "##########################"
+
+        cat kustomization.yaml
+      workingDir: $(workspaces.update-manifests-workspace.path)
+    - image: 'docker.io/alpine/git:v2.26.2'
+      name: git-commit
+      resources: {}
+      script: |
+        cd git-update-digest-workdir
+        
+        git config user.email ""
+        git config user.name ""
+        
+        git status
+        
+        feature=$(params.FEATURE)
+        if [ "$feature" = "feature" ]
+        then
+            feature="$feature-$RANDOM"
+        fi
+        ###git checkout -b $feature
+        pwd
+        ls -l
+        git add $(params.KUSTOMIZATION_PATH)
+        git commit -m "[ci] Image digest updated"
+        git remote set-url origin https://<USER>:<TOKEN>@github.com/<USER>/ecm-cicd-argocd.git
+        git push
+        #git push  --set-upstream origin $feature
+        
+        RESULT_SHA="$(git rev-parse HEAD | tr -d '\n')"
+        EXIT_CODE="$?"
+        if [ "$EXIT_CODE" != 0 ]
+        then
+          exit $EXIT_CODE
+        fi
+        # Make sure we don't add a trailing newline to the result!
+        echo -n "$RESULT_SHA" > $(results.commit.path)
+      workingDir: $(workspaces.update-manifests-workspace.path)

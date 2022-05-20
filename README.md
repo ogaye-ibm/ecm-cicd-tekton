@@ -49,5 +49,12 @@ docker tag webhook-native:0.0.3 quay.io/omar.gaye-ibm/webhook-native:0.0.3
 docker push quay.io/omar.gaye-ibm/webhook-native:0.0.3
 
 
+tkn pipeline start build-jvm-push-update-manifests \
+ -w name=shared-workspace,claimName=webhook-pvc \ 
+ -w name=ssh-creds,secret=webhook-git-src-basic-auth-secret \ 
+ -w name=docker-reg-creds,secret=docker-creds \ 
+ -w name=argocd-ssh-creds,secret=git-argocd-basic-auth-secret \ 
+ --showlog
+
 
 ```
