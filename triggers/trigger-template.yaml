@@ -1,0 +1,45 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: gecm-webhook-triggertemplate
+  namespace: default
+spec:
+  params:
+    - name: gitrevision
+      description: The git revision
+      default: master
+    - name: gitrepositoryurl
+      description: The git repository url
+    - name: namespace
+      description: The namespace to create the resources
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: build-jvm-push-deploy-pipeline-run-
+        namespace: $(tt.params.namespace)
+      spec:
+        serviceAccountName: ecm-tekton-triggers-sa
+        pipelineRef:
+          name: build-jvm-push-deploy
+        resources:
+          - name: source-repo
+            resourceSpec:
+              type: git
+              params:
+                - name: revision
+                  value: $(tt.params.gitrevision)
+                - name: url
+                  value: $(tt.params.gitrepositoryurl)
+          - name: image-source
+            resourceSpec:
+              type: image
+              params:
+                - name: url
+                  value: 'quay.io/ogaye-ibm/webhook-jvm:0.0.3'
+          - name: event-to-sink
+            resourceSpec:
+              type: cloudEvent
+              params:
+                - name: targetURI
+                  value: http://event-display.getting-started.svc.cluster.local

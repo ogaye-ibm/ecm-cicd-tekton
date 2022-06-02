@@ -26,10 +26,10 @@ oc apply -f tasks/common
 oc apply -f tasks/quarkus-jvm
 oc apply -f pipelines
 
-tkn pipeline start build-push-deploy-kaniko \
- -w name=shared-workspace,claimName=webhook-pvc \
- -w name=ssh-creds,secret=webhook-git-src-basic-auth-secret \
- -w name=docker-reg-creds,secret=docker-creds \
+tkn pipeline start build-push-deploy-kaniko \ 
+ -w name=shared-workspace,claimName=webhook-pvc \ 
+ -w name=ssh-creds,secret=webhook-git-src-basic-auth-secret \ 
+ -w name=docker-reg-creds,secret=docker-creds \ 
  --showlog
 
 
@@ -49,7 +49,7 @@ docker tag webhook-native:0.0.3 quay.io/omar.gaye-ibm/webhook-native:0.0.3
 docker push quay.io/omar.gaye-ibm/webhook-native:0.0.3
 
 
-tkn pipeline start build-jvm-push-update-manifests \
+tkn pipeline start build-jvm-push-update-manifests \ 
  -w name=shared-workspace,claimName=webhook-pvc \ 
  -w name=ssh-creds,secret=webhook-git-src-basic-auth-secret \ 
  -w name=docker-reg-creds,secret=docker-creds \ 

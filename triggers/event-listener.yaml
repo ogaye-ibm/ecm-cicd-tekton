@@ -1,0 +1,12 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: ecm-webhook-eventlistener
+  namespace: default
+spec:
+  serviceAccountName: ecm-tekton-triggers-sa
+  triggers:
+    - bindings:
+        - ref: ecm-webhook-pipelinebinding
+      template:
+        ref: ecm-webhook-triggertemplate

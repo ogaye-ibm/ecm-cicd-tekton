@@ -19,8 +19,8 @@ spec:
       default: main
     - name: IMAGE_REGISTRY
       description: Registry to push the image to
-      #default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE:0.0.3'
-      default: 'quay.io/omar.gaye-ibm'
+      default: 'image-registry.openshift-image-registry.svc:5000/$NAMESPACE'
+      #default: 'quay.io/omar.gaye-ibm'
     - name: IMAGE_NAME
       description: The name of the image to be built from the code.
       default: 'webhook-native'

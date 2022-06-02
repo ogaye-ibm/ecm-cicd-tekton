@@ -1,0 +1,13 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: ecm-webhook-pipelinebinding
+  namespace: default
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.head_commit.id)
+    - name: namespace
+      value: default
+    - name: gitrepositoryurl
+      value: "https://github.com/$(body.repository.full_name)"
