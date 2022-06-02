@@ -66,11 +66,10 @@ spec:
         ls -l
         git add $(params.KUSTOMIZATION_PATH)
         git commit -m "[ci] Image digest updated"
-        #git remote set-url origin https://<USER>:<TOKEN>@github.com/<USER>/ecm-cicd-argocd.git
-        git remote set-url origin https://ogaye-ibm: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@github.com/ogaye-ibm/ecm-cicd-argocd.git
+        git remote set-url origin https://<USER>:<TOKEN>@github.com/<USER>/ecm-cicd-argocd.git
 
-        #git push
-        git push  --set-upstream origin $feature
+        git push
+        #git push  --set-upstream origin $feature
         
         RESULT_SHA="$(git rev-parse HEAD | tr -d '\n')"
         EXIT_CODE="$?"
